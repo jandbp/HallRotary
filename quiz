@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rotary Club of Hall — Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9962A;
+    --gold-light: #F5E6C0;
+    --gold-dark: #8A6510;
+    --navy: #1A2E4A;
+    --navy-light: #2A4066;
+    --navy-mid: #1E3556;
+    --white: #FDFAF4;
+    --cream: #F7F1E3;
+    --text: #1A1A1A;
+    --muted: #6B6350;
+    --correct: #2D7A4F;
+    --correct-bg: #E8F5EE;
+    --wrong: #B03030;
+    --wrong-bg: #FBE8E8;
+    --radius: 14px;
+    --shadow: 0 4px 24px rgba(26,46,74,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(201,150,42,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(201,150,42,0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: var(--shadow), 0 0 0 1px rgba(201,150,42,0.15);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .card-header {
+    background: var(--navy-mid);
+    padding: 20px 24px 16px;
+    text-align: center;
+    border-bottom: 2px solid var(--gold);
+  }
+
+  .club-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .app-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--white);
+    line-height: 1.2;
+  }
+
+  .card-body { padding: 24px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Role selector */
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  .role-btn {
+    border: 2px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 20px 12px;
+    text-align: center;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .role-btn:hover { background: var(--gold-light); }
+  .role-btn .role-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+  .role-btn .role-label { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--navy); display: block; font-weight: 600; }
+  .role-btn .role-sub { font-size: 12px; color: var(--muted); margin-top: 3px; display: block; }
+
+  /* Code display */
+  .session-code {
+    background: var(--navy);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    margin: 16px 0;
+  }
+  .session-code .code-label { font-size: 12px; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .session-code .code-digits { font-family: 'Playfair Display', serif; font-size: 52px; color: var(--white); letter-spacing: 12px; line-height: 1; }
+  .session-code .code-hint { font-size: 12px; color: rgba(253,250,244,0.5); margin-top: 8px; }
+
+  /* Player list */
+  .player-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; max-height: 180px; overflow-y: auto; }
+  .player-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--cream); border-radius: 10px; padding: 10px 14px;
+    font-size: 15px; color: var(--navy); font-weight: 500;
+  }
+  .player-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--correct); flex-shrink: 0; }
+  .player-count { font-size: 13px; color: var(--muted); text-align: center; }
+
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; padding: 14px;
+    border-radius: var(--radius); border: none; cursor: pointer;
+    font-family: 'Source Sans 3', sans-serif; font-size: 16px; font-weight: 600;
+    transition: all 0.15s; text-align: center;
+  }
+  .btn-primary { background: var(--gold); color: var(--navy); }
+  .btn-primary:hover { background: var(--gold-dark); color: var(--white); }
+  .btn-primary:disabled { background: #ccc; color: #888; cursor: not-allowed; }
+  .btn-navy { background: var(--navy); color: var(--white); }
+  .btn-navy:hover { background: var(--navy-light); }
+  .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+  .btn-outline:hover { background: var(--gold-light); }
+
+  /* Form inputs */
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 12px 14px; border: 2px solid #DDD; border-radius: 10px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 18px; color: var(--text);
+    background: var(--white); transition: border-color 0.2s; outline: none;
+    text-align: center; letter-spacing: 4px;
+  }
+  .field input:focus { border-color: var(--gold); }
+  .field input.name-input { letter-spacing: 0; text-align: left; font-size: 16px; }
+
+  /* Progress */
+  .progress-wrap { margin-bottom: 16px; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .progress-bar { height: 6px; background: var(--cream); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 0.4s ease; }
+
+  /* Question */
+  .question-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 19px; color: var(--navy); line-height: 1.5;
+    text-align: center; margin-bottom: 20px;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .option-btn {
+    padding: 14px 16px; border-radius: 12px;
+    border: 2px solid #E0D9CC; background: var(--white);
+    font-family: 'Source Sans 3', sans-serif; font-size: 16px; color: var(--text);
+    text-align: left; cursor: pointer; transition: all 0.15s; line-height: 1.4;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--gold-light); }
+  .option-btn.selected { border-color: var(--navy); background: #EEF2F8; color: var(--navy); }
+  .option-btn.correct { border-color: var(--correct); background: var(--correct-bg); color: var(--correct); }
+  .option-btn.wrong { border-color: var(--wrong); background: var(--wrong-bg); color: var(--wrong); }
+  .option-btn:disabled { cursor: default; }
+  .opt-letter {
+    width: 28px; height: 28px; border-radius: 50%; border: 2px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+
+  /* Waiting indicator */
+  .waiting-msg {
+    text-align: center; padding: 14px;
+    background: var(--cream); border-radius: 10px;
+    font-size: 14px; color: var(--muted);
+  }
+  .waiting-msg .dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+  @keyframes dots { 0%,20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } 80%,100% { content: ''; } }
+
+  /* Score */
+  .score-display { text-align: center; padding: 20px 0 16px; }
+  .score-number { font-family: 'Playfair Display', serif; font-size: 56px; color: var(--gold); line-height: 1; }
+  .score-denom { font-size: 20px; color: var(--muted); }
+  .score-msg { font-size: 16px; color: var(--navy); margin-top: 6px; font-weight: 500; }
+
+  .results-list { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
+  .result-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-radius: 10px; background: var(--cream);
+    font-size: 14px; color: var(--text);
+  }
+  .result-item .r-label { flex: 1; padding-right: 8px; }
+  .result-tick { color: var(--correct); font-size: 18px; font-weight: 700; }
+  .result-cross { color: var(--wrong); font-size: 18px; font-weight: 700; }
+
+  /* Leaderboard */
+  .leaderboard { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .lb-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 12px; background: var(--cream);
+  }
+  .lb-row.first { background: var(--gold-light); border: 2px solid var(--gold); }
+  .lb-pos { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--muted); width: 24px; text-align: center; }
+  .lb-row.first .lb-pos { color: var(--gold-dark); }
+  .lb-name { flex: 1; font-size: 16px; font-weight: 600; color: var(--navy); }
+  .lb-score { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--navy); }
+  .lb-row.first .lb-score { color: var(--gold-dark); }
+
+  /* Host answer reveal */
+  .answer-reveal { background: var(--correct-bg); border: 2px solid var(--correct); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; text-align: center; }
+  .answer-reveal .ar-label { font-size: 12px; color: var(--correct); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .answer-reveal .ar-text { font-size: 16px; color: var(--correct); font-weight: 600; margin-top: 3px; }
+
+  .responses-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .resp-pill { flex: 1; text-align: center; padding: 6px 4px; border-radius: 8px; background: var(--cream); font-size: 12px; color: var(--muted); }
+  .resp-pill .rp-count { font-size: 18px; font-weight: 700; color: var(--navy); display: block; }
+
+  .divider { height: 1px; background: var(--cream); margin: 16px 0; }
+  .hint { font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; margin-bottom: 14px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .badge-host { background: var(--navy); color: var(--gold); letter-spacing: 0.06em; }
+  .badge-player { background: var(--gold-light); color: var(--gold-dark); letter-spacing: 0.06em; }
+  .badge-wrap { text-align: center; margin-bottom: 12px; }
+
+  .error-msg { font-size: 13px; color: var(--wrong); text-align: center; margin-top: 8px; min-height: 18px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <div class="club-name">Rotary Club of Hall</div>
+    <div class="app-title">Rotary International Quiz</div>
+  </div>
+  <div class="card-body">
+
+    <!-- SCREEN: Role select -->
+    <div class="screen active" id="screen-role">
+      <p class="hint">Are you running the quiz, or joining as a player?</p>
+      <div class="role-grid">
+        <button class="role-btn" onclick="startHost()">
+          <span class="role-icon">🎙️</span>
+          <span class="role-label">I'm the host</span>
+          <span class="role-sub">Running the quiz</span>
+        </button>
+        <button class="role-btn" onclick="showJoin()">
+          <span class="role-icon">📱</span>
+          <span class="role-label">I'm a player</span>
+          <span class="role-sub">Joining on my phone</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN: Host lobby -->
+    <div class="screen" id="screen-host-lobby">
+      <div class="badge-wrap"><span class="badge badge-host">HOST</span></div>
+      <div class="session-code">
+        <div class="code-label">Session code — show this to your players</div>
+        <div class="code-digits" id="host-code-display">—</div>
+        <div class="code-hint">Players enter this code on their phones</div>
+      </div>
+      <div class="player-count" id="host-player-count">Waiting for players to join…</div>
+      <div class="player-list" id="host-player-list"></div>
+      <button class="btn btn-primary" id="btn-start-quiz" onclick="hostStartQuiz()" disabled>Start quiz</button>
+    </div>
+
+    <!-- SCREEN: Host question -->
+    <div class="screen" id="screen-host-question">
+      <div class="badge-wrap"><span class="badge badge-host">HOST</span></div>
+      <div class="progress-wrap">
+        <div class="progress-info">
+          <span id="host-q-label">Question 1 of 10</span>
+          <span id="host-resp-label">0 answered</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="host-progress-fill" style="width:0%"></div></div>
+      </div>
+      <div class="question-text" id="host-question-text"></div>
+      <div class="options" id="host-options"></div>
+      <div id="host-answer-area"></div>
+      <button class="btn btn-primary" id="btn-reveal" onclick="hostReveal()">Reveal answer</button>
+      <button class="btn btn-navy" id="btn-next-q" onclick="hostNext()" style="margin-top:10px;display:none;">Next question →</button>
+    </div>
+
+    <!-- SCREEN: Host final -->
+    <div class="screen" id="screen-host-final">
+      <div class="badge-wrap"><span class="badge badge-host">HOST</span></div>
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="font-family:'Playfair Display',serif; font-size:20px; color:var(--navy);">Final Leaderboard</div>
+      </div>
+      <div class="leaderboard" id="host-leaderboard"></div>
+      <div class="divider"></div>
+      <button class="btn btn-outline" onclick="resetAll()">Play again</button>
+    </div>
+
+    <!-- SCREEN: Player join -->
+    <div class="screen" id="screen-player-join">
+      <div class="badge-wrap"><span class="badge badge-player">PLAYER</span></div>
+      <p class="hint">Enter the 4-digit code shown on the host's screen, then your name.</p>
+      <div class="field">
+        <label>Session code</label>
+        <input type="text" id="join-code" maxlength="4" placeholder="0000" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <div class="field">
+        <label>Your name</label>
+        <input type="text" id="join-name" class="name-input" placeholder="e.g. Margaret" maxlength="24">
+      </div>
+      <div class="error-msg" id="join-error"></div>
+      <button class="btn btn-primary" onclick="playerJoin()">Join quiz</button>
+    </div>
+
+    <!-- SCREEN: Player waiting -->
+    <div class="screen" id="screen-player-waiting">
+      <div class="badge-wrap"><span class="badge badge-player">PLAYER</span></div>
+      <div style="text-align:center; padding: 20px 0;">
+        <div style="font-size:40px; margin-bottom:12px;">✅</div>
+        <div style="font-family:'Playfair Display',serif; font-size:20px; color:var(--navy); margin-bottom:8px;">You're in!</div>
+        <div style="font-size:15px; color:var(--muted);" id="player-name-display"></div>
+      </div>
+      <div class="waiting-msg">Waiting for the host to start<span class="dots"></span></div>
+    </div>
+
+    <!-- SCREEN: Player question -->
+    <div class="screen" id="screen-player-question">
+      <div class="badge-wrap"><span class="badge badge-player">PLAYER</span></div>
+      <div class="progress-wrap">
+        <div class="progress-info">
+          <span id="player-q-label">Question 1 of 10</span>
+          <span id="player-score-live">Score: 0</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="player-progress-fill" style="width:0%"></div></div>
+      </div>
+      <div class="question-text" id="player-question-text"></div>
+      <div class="options" id="player-options"></div>
+      <div class="waiting-msg" id="player-waiting-next" style="display:none;">Waiting for host<span class="dots"></span></div>
+    </div>
+
+    <!-- SCREEN: Player final -->
+    <div class="screen" id="screen-player-final">
+      <div class="badge-wrap"><span class="badge badge-player">PLAYER</span></div>
+      <div class="score-display">
+        <div><span class="score-number" id="player-final-score">0</span><span class="score-denom">/10</span></div>
+        <div class="score-msg" id="player-score-msg"></div>
+      </div>
+      <div class="results-list" id="player-results-list"></div>
+      <button class="btn btn-outline" onclick="resetAll()">Play again</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+  { q: "In what year was Rotary International founded?", opts: ["1895","1900","1905","1912"], ans: 2 },
+  { q: "Who founded Rotary International?", opts: ["Herbert Taylor","Paul Harris","Arch Klumph","Chesley Perry"], ans: 1 },
+  { q: "In which city was the first Rotary club formed?", opts: ["New York","London","Chicago","Sydney"], ans: 2 },
+  { q: "What is the Rotary motto?", opts: ["Service Above Self","One Profits Most Who Serves Best","Together We Serve","All of the above"], ans: 0 },
+  { q: "How many parts does the Rotary Four-Way Test have?", opts: ["Three","Four","Five","Six"], ans: 1 },
+  { q: "What does the Rotary wheel emblem represent?", opts: ["Friendship","Industry and motion","Global reach","Unity"], ans: 1 },
+  { q: "How many spokes does the Rotary wheel have?", opts: ["12","16","24","6"], ans: 1 },
+  { q: "What is the name of Rotary's youth exchange program?", opts: ["Rotaract","Interact","Youth Exchange","New Generations"], ans: 2 },
+  { q: "Rotaract clubs are for people aged:", opts: ["14–18","18–35","25–40","Under 14"], ans: 1 },
+  { q: "Where is Rotary International's world headquarters?", opts: ["Washington D.C.","London","Evanston, Illinois","Geneva"], ans: 2 },
+  { q: "What disease has Rotary nearly eradicated through its PolioPlus campaign?", opts: ["Malaria","Smallpox","Polio","Tuberculosis"], ans: 2 },
+  { q: "The Rotary Foundation was established in what year?", opts: ["1917","1928","1945","1955"], ans: 0 },
+  { q: "What is the name of Rotary's youth leadership program?", opts: ["RYLA","Interact","Rotaract","Youth Exchange"], ans: 0 },
+  { q: "Which of these is one of Rotary's six Areas of Focus?", opts: ["Climate change advocacy","Peace and conflict prevention","Political reform","Economic growth"], ans: 1 },
+  { q: "Rotary International has clubs in approximately how many countries?", opts: ["100","150","200","More than 200"], ans: 3 },
+  { q: "What is the approximate number of Rotary clubs worldwide?", opts: ["5,000","15,000","35,000","60,000"], ans: 2 },
+  { q: "The Rotary year begins on:", opts: ["1 January","1 July","1 September","1 April"], ans: 1 },
+  { q: "What does RYLA stand for?", opts: ["Rotary Young Leaders Award","Rotary Youth Leadership Awards","Rotary Youth Learning Activities","Rotary Young Learners Association"], ans: 1 },
+  { q: "The Four-Way Test was created in which decade?", opts: ["1910s","1920s","1930s","1940s"], ans: 2 },
+  { q: "Who created the Four-Way Test?", opts: ["Paul Harris","Herbert Taylor","Chesley Perry","Ches Perry"], ans: 1 },
+  { q: "Interact clubs are for young people aged:", opts: ["12–18","14–18","16–21","18–25"], ans: 1 },
+  { q: "What colour are the two main colours of the Rotary International logo?", opts: ["Red and gold","Blue and gold","Navy and silver","Gold and white"], ans: 1 },
+  { q: "Which Rotary program supports vocational training?", opts: ["Rotaract","Vocational Training Teams","Peace Fellowships","RYLA"], ans: 1 },
+  { q: "Rotary's PolioPlus program was launched in:", opts: ["1975","1985","1995","2000"], ans: 1 },
+  { q: "What is a Rotary 'Paul Harris Fellow'?", opts: ["A founding member","An honorary recognition for significant contributions","A club president","A district governor"], ans: 1 },
+  { q: "Which first in Rotary history happened in 1987?", opts: ["First woman member admitted","First club outside USA","First international convention","First Peace Fellowship awarded"], ans: 0 },
+  { q: "Rotary International's annual convention is held:", opts: ["Every two years","Every year","Every five years","Monthly"], ans: 1 },
+  { q: "Which statement is part of the Four-Way Test?", opts: ["Is it kind?","Will it be beneficial to all concerned?","Does it serve the community?","Is it legal?"], ans: 1 },
+  { q: "What is the Rotary Action Group focused on?", opts: ["Environmental sustainability","Peace building","Specific humanitarian causes","Political lobbying"], ans: 2 },
+  { q: "How many Rotary Peace Centers exist worldwide?", opts: ["3","6","10","12"], ans: 1 },
+  { q: "In which decade did Rotary expand outside the USA for the first time?", opts: ["1900s","1910s","1920s","1930s"], ans: 1 },
+  { q: "What is the primary language of Rotary International business?", opts: ["French","Spanish","English","All equally"], ans: 2 },
+  { q: "What is the Rotary emblem known as?", opts: ["The Service Wheel","The Gear Wheel","The Cogwheel","The Rotary Cog"], ans: 2 },
+  { q: "Rotary clubs traditionally meet:", opts: ["Monthly","Weekly","Fortnightly","Quarterly"], ans: 1 },
+  { q: "Which is NOT one of Rotary's six Areas of Focus?", opts: ["Maternal and child health","Basic education and literacy","Climate activism","Water and sanitation"], ans: 2 },
+  { q: "What does 'Service Above Self' mean in Rotary context?", opts: ["Volunteering full time","Placing community needs before personal gain","Donating all profits","Serving in silence"], ans: 1 },
+  { q: "The Rotary Foundation's 'Future Vision Plan' focuses on:", opts: ["Digital transformation","Measurable humanitarian impact","Club membership growth","Political advocacy"], ans: 1 },
+  { q: "Which Australian city hosted a Rotary International Convention?", opts: ["Sydney","Melbourne","Brisbane","Adelaide"], ans: 0 },
+  { q: "What year did Rotary reach one million members?", opts: ["1950","1960","1969","1980"], ans: 2 },
+  { q: "Rotary's literacy programs primarily target:", opts: ["University students","Adults and children in developing regions","Professional training","Online education"], ans: 1 },
+  { q: "A Rotary 'District' is:", opts: ["A national organisation","A geographic grouping of clubs","An international committee","A type of club"], ans: 1 },
+  { q: "What does the Rotary International president do?", opts: ["Manages all club finances","Sets the theme and priorities for the Rotary year","Elects district governors","Oversees all service projects"], ans: 1 },
+  { q: "How many questions are in this quiz?", opts: ["5","8","10","12"], ans: 2 },
+  { q: "Rotary's 'End Polio Now' campaign partners with which global organisation?", opts: ["WHO","UNICEF","Bill & Melinda Gates Foundation","All of the above"], ans: 3 },
+  { q: "The first Rotary club outside North America was formed in:", opts: ["Australia","Great Britain","India","Germany"], ans: 1 },
+  { q: "Rotary International's fiscal year budget is in which currency?", opts: ["British Pounds","Euros","US Dollars","Australian Dollars"], ans: 2 },
+  { q: "What is the maximum duration of a Rotary International presidential term?", opts: ["6 months","1 year","2 years","3 years"], ans: 1 },
+  { q: "Which Rotary program awards graduate-level university scholarships?", opts: ["Paul Harris Fellows","Rotary Peace Fellowships","RYLA grants","Vocational Training Teams"], ans: 1 },
+  { q: "The Rotary Club of Hall is located near which Australian city?", opts: ["Sydney","Canberra","Melbourne","Hobart"], ans: 1 },
+  { q: "What does Rotary's 'Every Rotarian Every Year' initiative encourage?", opts: ["Annual attendance at conventions","All members to contribute to the Rotary Foundation","Weekly attendance","Community service hours"], ans: 1 },
+];
+
+const LETTERS = ['A','B','C','D'];
+
+let state = {
+  role: null,
+  sessionCode: null,
+  playerName: null,
+  currentQ: 0,
+  selectedQuestions: [],
+  playerAnswers: [],
+  playerScore: 0,
+  revealed: false,
+};
+
+function getStore() {
+  try { return JSON.parse(localStorage.getItem('rotaryQuiz') || '{}'); } catch(e) { return {}; }
+}
+function setStore(data) {
+  localStorage.setItem('rotaryQuiz', JSON.stringify(data));
+}
+function generateCode() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// HOST FLOW
+function startHost() {
+  const code = generateCode();
+  state.role = 'host';
+  state.sessionCode = code;
+  const selected = shuffle(QUESTIONS).slice(0, 10);
+  state.selectedQuestions = selected;
+
+  setStore({
+    code,
+    phase: 'lobby',
+    questions: selected,
+    currentQ: 0,
+    revealed: false,
+    players: {},
+    responses: {},
+  });
+
+  document.getElementById('host-code-display').textContent = code.split('').join(' ');
+  showScreen('screen-host-lobby');
+  pollHostLobby();
+}
+
+let lobbyInterval;
+function pollHostLobby() {
+  clearInterval(lobbyInterval);
+  lobbyInterval = setInterval(() => {
+    const store = getStore();
+    if (!store.players) return;
+    const players = Object.keys(store.players);
+    const count = players.length;
+    document.getElementById('host-player-count').textContent =
+      count === 0 ? 'Waiting for players to join…' :
+      count === 1 ? '1 player has joined' : `${count} players have joined`;
+    const list = document.getElementById('host-player-list');
+    list.innerHTML = players.map(n =>
+      `<div class="player-item"><div class="player-dot"></div>${n}</div>`
+    ).join('');
+    const btn = document.getElementById('btn-start-quiz');
+    btn.disabled = count === 0;
+    btn.textContent = count > 0 ? `Start quiz (${count} joined)` : 'Start quiz';
+  }, 800);
+}
+
+function hostStartQuiz() {
+  clearInterval(lobbyInterval);
+  const store = getStore();
+  store.phase = 'question';
+  store.currentQ = 0;
+  store.revealed = false;
+  store.responses = {};
+  setStore(store);
+  state.currentQ = 0;
+  state.revealed = false;
+  showHostQuestion();
+}
+
+function showHostQuestion() {
+  const store = getStore();
+  const q = store.questions[state.currentQ];
+  const total = store.questions.length;
+  const qNum = state.currentQ + 1;
+
+  document.getElementById('host-q-label').textContent = `Question ${qNum} of ${total}`;
+  document.getElementById('host-progress-fill').style.width = `${(qNum/total)*100}%`;
+  document.getElementById('host-question-text').textContent = q.q;
+  document.getElementById('host-answer-area').innerHTML = '';
+
+  const optsEl = document.getElementById('host-options');
+  optsEl.innerHTML = q.opts.map((o, i) =>
+    `<button class="option-btn" disabled>
+      <span class="opt-letter">${LETTERS[i]}</span>${o}
+    </button>`
+  ).join('');
+
+  document.getElementById('btn-reveal').style.display = 'block';
+  document.getElementById('btn-next-q').style.display = 'none';
+  document.getElementById('host-resp-label').textContent = '0 answered';
+
+  showScreen('screen-host-question');
+  pollHostResponses();
+}
+
+let respInterval;
+function pollHostResponses() {
+  clearInterval(respInterval);
+  respInterval = setInterval(() => {
+    const store = getStore();
+    const responses = store.responses || {};
+    const count = Object.keys(responses).filter(k => responses[k].q === state.currentQ).length;
+    const total = Object.keys(store.players || {}).length;
+    document.getElementById('host-resp-label').textContent =
+      `${count}/${total} answered`;
+  }, 600);
+}
+
+function hostReveal() {
+  clearInterval(respInterval);
+  const store = getStore();
+  const q = store.questions[state.currentQ];
+  store.revealed = true;
+  setStore(store);
+  state.revealed = true;
+
+  const optsEl = document.getElementById('host-options');
+  optsEl.querySelectorAll('.option-btn').forEach((btn, i) => {
+    if (i === q.ans) btn.classList.add('correct');
+  });
+
+  document.getElementById('host-answer-area').innerHTML =
+    `<div class="answer-reveal">
+      <div class="ar-label">Correct answer</div>
+      <div class="ar-text">${LETTERS[q.ans]}: ${q.opts[q.ans]}</div>
+    </div>`;
+
+  document.getElementById('btn-reveal').style.display = 'none';
+  const nextBtn = document.getElementById('btn-next-q');
+  const isLast = state.currentQ >= store.questions.length - 1;
+  nextBtn.textContent = isLast ? 'Show final results' : 'Next question →';
+  nextBtn.style.display = 'block';
+}
+
+function hostNext() {
+  const store = getStore();
+  const isLast = state.currentQ >= store.questions.length - 1;
+  state.currentQ++;
+  store.currentQ = state.currentQ;
+  store.revealed = false;
+
+  if (isLast) {
+    store.phase = 'final';
+    setStore(store);
+    showHostFinal();
+  } else {
+    store.responses = {};
+    setStore(store);
+    showHostQuestion();
+  }
+}
+
+function showHostFinal() {
+  const store = getStore();
+  const players = store.players || {};
+  const scores = {};
+  Object.keys(players).forEach(name => {
+    scores[name] = players[name].score || 0;
+  });
+  const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+  const medals = ['🥇','🥈','🥉'];
+  const lb = document.getElementById('host-leaderboard');
+  lb.innerHTML = sorted.map(([name, score], i) =>
+    `<div class="lb-row ${i===0?'first':''}">
+      <span class="lb-pos">${medals[i] || (i+1)}</span>
+      <span class="lb-name">${name}</span>
+      <span class="lb-score">${score}/10</span>
+    </div>`
+  ).join('');
+  showScreen('screen-host-final');
+}
+
+// PLAYER FLOW
+function showJoin() {
+  showScreen('screen-player-join');
+}
+
+function playerJoin() {
+  const code = document.getElementById('join-code').value.trim();
+  const name = document.getElementById('join-name').value.trim();
+  const err = document.getElementById('join-error');
+
+  if (code.length !== 4) { err.textContent = 'Please enter the 4-digit code.'; return; }
+  if (!name) { err.textContent = 'Please enter your name.'; return; }
+
+  const store = getStore();
+  if (store.code !== code) { err.textContent = 'Code not found. Check the host screen.'; return; }
+  if (store.phase !== 'lobby') { err.textContent = 'The quiz has already started.'; return; }
+
+  err.textContent = '';
+  state.role = 'player';
+  state.playerName = name;
+  state.sessionCode = code;
+  state.playerScore = 0;
+  state.playerAnswers = [];
+  state.currentQ = 0;
+
+  store.players = store.players || {};
+  store.players[name] = { score: 0 };
+  setStore(store);
+
+  document.getElementById('player-name-display').textContent = `Welcome, ${name}!`;
+  showScreen('screen-player-waiting');
+  pollForStart();
+}
+
+let startInterval;
+function pollForStart() {
+  clearInterval(startInterval);
+  startInterval = setInterval(() => {
+    const store = getStore();
+    if (store.phase === 'question') {
+      clearInterval(startInterval);
+      state.currentQ = 0;
+      showPlayerQuestion();
+    }
+    if (store.phase === 'final') {
+      clearInterval(startInterval);
+      showPlayerFinal();
+    }
+  }, 800);
+}
+
+function showPlayerQuestion() {
+  const store = getStore();
+  if (!store.questions) return;
+  const q = store.questions[state.currentQ];
+  const total = store.questions.length;
+  const qNum = state.currentQ + 1;
+
+  document.getElementById('player-q-label').textContent = `Question ${qNum} of ${total}`;
+  document.getElementById('player-score-live').textContent = `Score: ${state.playerScore}`;
+  document.getElementById('player-progress-fill').style.width = `${(qNum/total)*100}%`;
+  document.getElementById('player-question-text').textContent = q.q;
+  document.getElementById('player-waiting-next').style.display = 'none';
+
+  const optsEl = document.getElementById('player-options');
+  optsEl.innerHTML = q.opts.map((o, i) =>
+    `<button class="option-btn" onclick="playerAnswer(${i})">
+      <span class="opt-letter">${LETTERS[i]}</span>${o}
+    </button>`
+  ).join('');
+
+  showScreen('screen-player-question');
+  pollForReveal();
+}
+
+let revealInterval;
+function playerAnswer(idx) {
+  const store = getStore();
+  const q = store.questions[state.currentQ];
+  const optsEl = document.getElementById('player-options');
+  optsEl.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  optsEl.querySelectorAll('.option-btn')[idx].classList.add('selected');
+
+  store.responses = store.responses || {};
+  store.responses[state.playerName] = { q: state.currentQ, ans: idx };
+  setStore(store);
+
+  document.getElementById('player-waiting-next').style.display = 'block';
+
+  clearInterval(revealInterval);
+  pollForReveal(idx);
+}
+
+function pollForReveal(chosenIdx) {
+  clearInterval(revealInterval);
+  revealInterval = setInterval(() => {
+    const store = getStore();
+    if (store.revealed && store.currentQ === state.currentQ) {
+      clearInterval(revealInterval);
+      const q = store.questions[state.currentQ];
+      const optsEl = document.getElementById('player-options');
+      optsEl.querySelectorAll('.option-btn').forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === q.ans) btn.classList.add('correct');
+        else if (i === chosenIdx && chosenIdx !== q.ans) btn.classList.add('wrong');
+      });
+
+      const correct = chosenIdx === q.ans;
+      if (correct) state.playerScore++;
+      state.playerAnswers.push({ q: q.q, correct });
+
+      // Update score in store
+      store.players = store.players || {};
+      store.players[state.playerName] = { score: state.playerScore };
+      setStore(store);
+
+      document.getElementById('player-waiting-next').style.display = 'none';
+      pollForNext();
+    }
+    if (store.phase === 'final') {
+      clearInterval(revealInterval);
+      showPlayerFinal();
+    }
+  }, 600);
+}
+
+let nextInterval;
+function pollForNext() {
+  clearInterval(nextInterval);
+  nextInterval = setInterval(() => {
+    const store = getStore();
+    const nextQ = store.currentQ;
+    if (store.phase === 'final') {
+      clearInterval(nextInterval);
+      showPlayerFinal();
+      return;
+    }
+    if (nextQ > state.currentQ) {
+      clearInterval(nextInterval);
+      state.currentQ = nextQ;
+      showPlayerQuestion();
+    }
+  }, 600);
+}
+
+function showPlayerFinal() {
+  const msgs = [
+    [10, 'Rotary Expert! Perfect score!'],
+    [8, 'Excellent — you really know your Rotary!'],
+    [6, 'Well done, solid Rotarian!'],
+    [4, 'Good effort — keep learning!'],
+    [0, 'Room to grow — but great effort!'],
+  ];
+  const msg = msgs.find(([min]) => state.playerScore >= min)?.[1] || msgs[msgs.length-1][1];
+  document.getElementById('player-final-score').textContent = state.playerScore;
+  document.getElementById('player-score-msg').textContent = msg;
+
+  const list = document.getElementById('player-results-list');
+  list.innerHTML = state.playerAnswers.map(a =>
+    `<div class="result-item">
+      <span class="r-label">${a.q.length > 45 ? a.q.slice(0,45)+'…' : a.q}</span>
+      ${a.correct ? '<span class="result-tick">✓</span>' : '<span class="result-cross">✗</span>'}
+    </div>`
+  ).join('');
+
+  showScreen('screen-player-final');
+}
+
+function resetAll() {
+  localStorage.removeItem('rotaryQuiz');
+  state = { role: null, sessionCode: null, playerName: null, currentQ: 0, selectedQuestions: [], playerAnswers: [], playerScore: 0, revealed: false };
+  [lobbyInterval, respInterval, startInterval, revealInterval, nextInterval].forEach(clearInterval);
+  showScreen('screen-role');
+}
+</script>
+</body>
+</html>
